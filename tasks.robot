@@ -20,7 +20,6 @@ ${robot_order_url}          https://robotsparebinindustries.com/#/robot-order
 ${img_folder}               ${OUTPUT_DIR}${/}image_files
 ${pdf_folder_receipts}      ${OUTPUT_DIR}${/}receipts
 ${zip_file}                 ${OUTPUT_DIR}${/}pdf_archive.zip
-${output_folder}            ${CURDIR}${/}output
 
 
 *** Tasks ***
@@ -29,19 +28,20 @@ Order robots from RobotSpareBin Industries Inc
     Open the robot order website
 
     ${orders}=    Get orders
-    FOR    ${rowOrder}    IN    @{orders}
+    FOR    ${row}    IN    @{orders}
         Close the annoying modal
-        Fill the form    ${rowOrder}
+        Fill the form    ${row}
         Wait Until Keyword Succeeds    10x    2s    Preview the robot
         Wait Until Keyword Succeeds    10x    2s    Submit The Order
-        ${orderid}    ${img_filename}=    Take a screenshot of the robot
-        ${pdf_filename}=    Store the receipt as a PDF file    ORDER_NUMBER=${order_id}
-        Embed the robot screenshot to the receipt PDF file    IMG_FILE=${img_filename}    PDF_FILE=${pdf_filename}
+        ${pdf}=    Store the receipt as a PDF file    ORDER_NUMBER=${row}[Order number]
+        ${screenshot}=    Take a screenshot of the robot    ORDER_NUMBER=${row}[Order number]
+        Embed the robot screenshot to the receipt PDF file    IMG_FILE=${screenshot}    PDF_FILE=${pdf}
+
         Go to order another robot
     END
-    Create a ZIP file of the receipts
+    Archive output PDFs
 
-    Log Out And Close The Browser
+    [Teardown]    Close RobotSpareBin Browser
 
 
 *** Keywords ***
@@ -72,7 +72,6 @@ Go to order another robot
 Fill the form
     [Arguments]    ${order}
 
-    Set Local Variable    ${order_no}    ${order}[Order number]
     Set Local Variable    ${head}    ${order}[Head]
     Set Local Variable    ${body}    ${order}[Body]
     Set Local Variable    ${legs}    ${order}[Legs]
@@ -114,19 +113,19 @@ Submit the order
     Page Should Contain Element    ${lbl_receipt}
 
 Take a screenshot of the robot
+    [Arguments]    ${ORDER_NUMBER}
     Set Local Variable    ${lbl_orderid}    xpath://html/body/div/div/div[1]/div/div[1]/div/div/p[1]
     Set Local Variable    ${img_robot}    //*[@id="robot-preview-image"]
 
     Wait Until Element Is Visible    ${img_robot}
     Wait Until Element Is Visible    ${lbl_orderid}
 
-    ${orderid}=    Get Text    //*[@id="receipt"]/p[1]
-    Set Local Variable    ${fully_qualified_img_filename}    ${img_folder}${/}${orderid}.png
+    Set Local Variable    ${fully_qualified_img_filename}    ${img_folder}${/}${ORDER_NUMBER}.png
 
     Sleep    1sec
     Log To Console    Capturing Screenshot to ${fully_qualified_img_filename}
     Capture Element Screenshot    ${img_robot}    ${fully_qualified_img_filename}
-    RETURN    ${orderid}    ${fully_qualified_img_filename}
+    RETURN    ${fully_qualified_img_filename}
 
 Store the receipt as a PDF file
     [Arguments]    ${ORDER_NUMBER}
@@ -147,8 +146,8 @@ Embed the robot screenshot to the receipt PDF file
     Add Files To PDF    ${image_files}    ${PDF_FILE}    append=True
     Close PDF    ${PDF_FILE}
 
-Create a ZIP file of the receipts
+Archive output PDFs
     Archive Folder With Zip    ${pdf_folder_receipts}    ${zip_file}    recursive=True    include=*.pdf
 
-Log Out And Close The Browser
+Close RobotSpareBin Browser
     Close Browser
