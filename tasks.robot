@@ -12,11 +12,11 @@ Library             RPA.PDF
 Library             RPA.Archive
 Library             RPA.FileSystem
 Library             RPA.RobotLogListener
+Library             RPA.Assistant
 
 
 *** Variables ***
 ${orders_file}              ${OUTPUT_DIR}${/}orders.csv
-${robot_order_url}          https://robotsparebinindustries.com/#/robot-order
 ${img_folder}               ${OUTPUT_DIR}${/}image_files
 ${pdf_folder_receipts}      ${OUTPUT_DIR}${/}receipts
 ${zip_file}                 ${OUTPUT_DIR}${/}pdf_archive.zip
@@ -25,7 +25,7 @@ ${zip_file}                 ${OUTPUT_DIR}${/}pdf_archive.zip
 *** Tasks ***
 Order robots from RobotSpareBin Industries Inc
     Directory Cleanup
-    Open the robot order website
+    User Input task
 
     ${orders}=    Get orders
     FOR    ${row}    IN    @{orders}
@@ -45,6 +45,18 @@ Order robots from RobotSpareBin Industries Inc
 
 
 *** Keywords ***
+User Input task
+    Add Heading    Input from User
+    Add Text Input    text_input
+    ...    Please enter URL
+    ...    default=https://robotsparebinindustries.com/#/robot-order
+    Add submit buttons    buttons=Submit,Cancel    default=Submit
+    ${result}=    Run dialog
+
+    ${url}=    Set Variable    ${result}[text_input]
+    Log To Console    ${url}
+    Open the robot order website    ${url}
+
 Directory Cleanup
     Log To console    Cleaning up content from previous runs
     Create Directory    ${img_folder}
@@ -54,6 +66,7 @@ Directory Cleanup
     Empty Directory    ${pdf_folder_receipts}
 
 Open the robot order website
+    [Arguments]    ${robot_order_url}
     Open Available Browser    ${robot_order_url}
 
 Get orders
